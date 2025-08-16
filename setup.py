@@ -72,7 +72,6 @@ commands_apt = [
 "sudo apt-get update",
 "sudo apt-get install python3-gpiozero python3-pigpio",
 "sudo apt-get install  -y python3-opencv",
-"sudo apt-get install -y python3-pyqt5 python3-opengl",
 "sudo apt-get install -y python3-picamera2",
 "sudo apt-get install -y python3-picamera2 --no-install-recommends",
 "sudo apt-get install -y python3-opencv",
