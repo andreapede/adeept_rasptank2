@@ -66,6 +66,10 @@ def optimization():
 def control_center():
     return send_from_directory(dir_path, 'control_center.html')
 
+@app.route('/advanced')
+def advanced_controller():
+    return send_from_directory(dir_path, 'advanced_controller.html')
+
 class webapp:
     def __init__(self):
         self.camera = camera

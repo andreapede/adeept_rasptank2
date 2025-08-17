@@ -15,6 +15,8 @@ import functions
 import robotLight
 import switch
 import socket
+import ultrasonic_monitor
+import ultra
 
 #websocket
 import asyncio
@@ -63,6 +65,12 @@ init_pwm4 = scGear.initPos[4]
 fuc = functions.Functions()
 fuc.setup()
 fuc.start()
+
+# Initialize ultrasonic monitor
+ultrasonic_mon = ultrasonic_monitor.UltrasonicMonitor()
+
+# WebSocket clients for sensor data broadcasting
+connected_clients = set()
 
 curpath = os.path.realpath(__file__)
 thisPath = "/" + os.path.dirname(curpath)
@@ -450,6 +458,45 @@ async def recv_msg(websocket):
             elif 'jpegQuality' in data:
                 quality = int(data.split()[1])  # 95 or 60
                 flask_app.camera.setJPEGQuality(quality)
+                
+            # Ultrasonic sensor commands
+            elif 'sensorRead' == data:
+                # Send single sensor reading
+                try:
+                    distance = ultra.checkdist()
+                    response['title'] = 'sensor_data'
+                    response['distance'] = round(distance, 2)
+                    response['timestamp'] = time.time()
+                except Exception as e:
+                    print(f"Error reading sensor: {e}")
+                    
+            elif 'sensorStart' == data:
+                # Start continuous sensor monitoring
+                def sensor_callback(distance):
+                    sensor_response = {
+                        'title': 'sensor_data',
+                        'distance': round(distance, 2),
+                        'timestamp': time.time()
+                    }
+                    # Add to response queue or broadcast immediately
+                    asyncio.create_task(websocket.send(json.dumps(sensor_response)))
+                
+                ultrasonic_mon.start_monitoring(callback=sensor_callback)
+                response['title'] = 'sensor_monitoring'
+                response['status'] = 'started'
+                
+            elif 'sensorStop' == data:
+                # Stop continuous sensor monitoring
+                ultrasonic_mon.stop_monitoring()
+                response['title'] = 'sensor_monitoring'
+                response['status'] = 'stopped'
+                
+            elif 'sensorRate' in data:
+                # Update sensor reading rate
+                rate = float(data.split()[1])
+                ultrasonic_mon.set_update_rate(rate)
+                response['title'] = 'sensor_rate'
+                response['rate'] = rate
 
         elif(isinstance(data,dict)):
             if data['title'] == "findColorSet":

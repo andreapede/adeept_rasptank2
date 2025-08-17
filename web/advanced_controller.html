@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RaspTank Advanced Controller</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f23;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px 20px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .status-bar {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 12px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            font-size: 12px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff4757;
+        }
+
+        .status-dot.connected {
+            background: #2ed573;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 350px 1fr 300px;
+            gap: 20px;
+            padding: 20px;
+            min-height: calc(100vh - 120px);
+        }
+
+        .panel {
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel h2 {
+            margin-bottom: 15px;
+            color: #64b5f6;
+            font-size: 18px;
+            border-bottom: 2px solid rgba(100,181,246,0.3);
+            padding-bottom: 8px;
+        }
+
+        /* Video Panel */
+        .video-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid rgba(255,255,255,0.2);
+            margin-bottom: 15px;
+        }
+
+        #video-canvas {
+            display: block;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+
+        /* Control Panels */
+        .control-section {
+            margin-bottom: 25px;
+        }
+
+        .control-section h3 {
+            color: #81c784;
+            margin-bottom: 10px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .button-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        .grid-3x3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .grid-2x2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .grid-1col {
+            grid-template-columns: 1fr;
+        }
+
+        .control-btn {
+            padding: 12px;
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            user-select: none;
+        }
+
+        .control-btn:hover {
+            background: rgba(100,181,246,0.3);
+            border-color: #64b5f6;
+            transform: translateY(-1px);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+            background: rgba(100,181,246,0.5);
+        }
+
+        .control-btn.active {
+            background: rgba(76,175,80,0.4);
+            border-color: #4caf50;
+        }
+
+        .control-btn.danger {
+            background: rgba(244,67,54,0.3);
+            border-color: #f44336;
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Sensor Display */
+        .sensor-display {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .distance-meter {
+            font-size: 36px;
+            font-weight: bold;
+            color: #64b5f6;
+            margin-bottom: 5px;
+        }
+
+        .distance-bar {
+            width: 100%;
+            height: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .distance-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        .distance-safe {
+            background: linear-gradient(90deg, #2ed573, #1dd1a1);
+        }
+
+        .distance-warning {
+            background: linear-gradient(90deg, #ffa502, #ff6348);
+        }
+
+        .distance-danger {
+            background: linear-gradient(90deg, #ff4757, #c0392b);
+        }
+
+        /* Sliders */
+        .slider-container {
+            margin: 15px 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255,255,255,0.2);
+            outline: none;
+            appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #64b5f6;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #64b5f6;
+            cursor: pointer;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        /* System Info */
+        .info-grid {
+            display: grid;
+            gap: 10px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .info-label {
+            color: #b0bec5;
+            font-size: 14px;
+        }
+
+        .info-value {
+            color: #64b5f6;
+            font-weight: 500;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto auto;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 10px;
+            }
+            
+            .panel {
+                padding: 15px;
+            }
+            
+            .button-grid.grid-3x3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* Animation classes */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .sensor-history {
+            height: 120px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            margin-top: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .history-canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 RaspTank Advanced Controller</h1>
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="ws-status"></div>
+                <span id="connection-text">Disconnected</span>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot" id="video-status"></div>
+                <span>Video Stream</span>
+            </div>
+            <div class="status-indicator">
+                <div class="status-dot" id="sensor-status"></div>
+                <span>Sensors</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Left Panel - Controls -->
+        <div class="panel fade-in">
+            <h2>🎮 Robot Controls</h2>
+            
+            <!-- Movement Controls -->
+            <div class="control-section">
+                <h3>Movement</h3>
+                <div class="button-grid grid-3x3">
+                    <div></div>
+                    <button class="control-btn" id="btn-forward" data-command="forward" data-key="87">⬆️ Forward</button>
+                    <div></div>
+                    <button class="control-btn" id="btn-left" data-command="left" data-key="65">⬅️ Left</button>
+                    <button class="control-btn danger" id="btn-stop" data-command="stop">⏹️ Stop</button>
+                    <button class="control-btn" id="btn-right" data-command="right" data-key="68">➡️ Right</button>
+                    <div></div>
+                    <button class="control-btn" id="btn-backward" data-command="backward" data-key="83">⬇️ Backward</button>
+                    <div></div>
+                </div>
+                
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Speed</span>
+                        <span id="speed-value">50</span>
+                    </div>
+                    <input type="range" class="slider" id="speed-slider" min="10" max="100" value="50">
+                </div>
+            </div>
+
+            <!-- Camera Controls -->
+            <div class="control-section">
+                <h3>Camera Control</h3>
+                <div class="button-grid grid-3x3">
+                    <div></div>
+                    <button class="control-btn" id="btn-cam-up" data-command="up">⬆️ Up</button>
+                    <div></div>
+                    <button class="control-btn" id="btn-cam-left" data-command="lookleft">⬅️ Left</button>
+                    <button class="control-btn" id="btn-cam-center">🎯 Center</button>
+                    <button class="control-btn" id="btn-cam-right" data-command="lookright">➡️ Right</button>
+                    <div></div>
+                    <button class="control-btn" id="btn-cam-down" data-command="down">⬇️ Down</button>
+                    <div></div>
+                </div>
+            </div>
+
+            <!-- Arm Controls -->
+            <div class="control-section">
+                <h3>Arm Control</h3>
+                <div class="button-grid grid-2x2">
+                    <button class="control-btn" id="btn-grab" data-command="grab">🤏 Grab</button>
+                    <button class="control-btn" id="btn-loose" data-command="loose">✋ Release</button>
+                    <button class="control-btn" id="btn-arm-up" data-command="armUp">⬆️ Arm Up</button>
+                    <button class="control-btn" id="btn-arm-down" data-command="armDown">⬇️ Arm Down</button>
+                </div>
+            </div>
+
+            <!-- Automatic Functions -->
+            <div class="control-section">
+                <h3>Automatic Functions</h3>
+                <div class="button-grid grid-1col">
+                    <button class="control-btn" id="btn-automatic" data-command="automatic">🚗 Auto Navigation</button>
+                    <button class="control-btn" id="btn-line-follow" data-command="trackLine">📏 Line Following</button>
+                    <button class="control-btn" id="btn-color-track" data-command="findColor">🎨 Color Tracking</button>
+                    <button class="control-btn" id="btn-police" data-command="police">🚨 Police Lights</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center Panel - Video Stream -->
+        <div class="panel fade-in">
+            <h2>📹 Video Stream</h2>
+            <div class="video-panel">
+                <div class="video-container">
+                    <canvas id="video-canvas" width="640" height="480"></canvas>
+                    <div class="video-overlay">
+                        <span id="video-info">Connecting...</span>
+                    </div>
+                </div>
+                
+                <!-- Video Optimization Controls -->
+                <div class="control-section" style="width: 100%;">
+                    <h3>Stream Optimization</h3>
+                    <div class="button-grid grid-3x3">
+                        <button class="control-btn" id="btn-res-high">📺 HD</button>
+                        <button class="control-btn active" id="btn-res-opt">⚡ Optimized</button>
+                        <button class="control-btn" id="btn-fps-30">🎬 30 FPS</button>
+                        <button class="control-btn active" id="btn-fps-15">⚡ 15 FPS</button>
+                        <button class="control-btn" id="btn-qual-high">🖼️ HQ</button>
+                        <button class="control-btn active" id="btn-qual-opt">⚡ Fast</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel - Sensors & Info -->
+        <div class="panel fade-in">
+            <h2>📡 Ultrasonic Sensor</h2>
+            
+            <div class="sensor-display">
+                <div class="distance-meter" id="distance-value">--- cm</div>
+                <div class="distance-bar">
+                    <div class="distance-fill distance-safe" id="distance-bar"></div>
+                </div>
+                <div style="font-size: 12px; color: #b0bec5;" id="sensor-status-text">Sensor Offline</div>
+            </div>
+
+            <div class="control-section">
+                <h3>Sensor Controls</h3>
+                <div class="button-grid grid-1col">
+                    <button class="control-btn" id="btn-sensor-continuous">🔄 Continuous Reading</button>
+                    <button class="control-btn" id="btn-sensor-single">📍 Single Reading</button>
+                </div>
+                
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <span>Update Rate</span>
+                        <span id="rate-value">10 Hz</span>
+                    </div>
+                    <input type="range" class="slider" id="rate-slider" min="1" max="20" value="10">
+                </div>
+            </div>
+
+            <div class="sensor-history">
+                <canvas class="history-canvas" id="sensor-chart" width="280" height="120"></canvas>
+            </div>
+
+            <div class="control-section">
+                <h2>⚙️ System Info</h2>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <span class="info-label">CPU Usage</span>
+                        <span class="info-value" id="cpu-usage">---%</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Temperature</span>
+                        <span class="info-value" id="cpu-temp">---°C</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">RAM Usage</span>
+                        <span class="info-value" id="ram-usage">---%</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Distance</span>
+                        <span class="info-value" id="current-distance">--- cm</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let websocket = null;
+        let videoUpdateTimer = null;
+        let sensorReadTimer = null;
+        let sensorHistory = [];
+        let currentDistance = 0;
+        let sensorContinuous = false;
+        let currentSpeed = 50;
+        let sensorUpdateRate = 10;
+        let activeButtons = new Set();
+
+        // Initialize on page load
+        window.addEventListener('load', function() {
+            initializeWebSocket();
+            initializeVideoStream();
+            initializeSensorChart();
+            setupEventListeners();
+            setupKeyboardControls();
+        });
+
+        // WebSocket connection
+        function initializeWebSocket() {
+            const wsUrl = `ws://${location.hostname}:8888`;
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = function() {
+                console.log('WebSocket connected');
+                websocket.send('admin:123456'); // Authentication
+                updateConnectionStatus(true);
+                
+                // Request system info
+                requestSystemInfo();
+            };
+            
+            websocket.onmessage = function(event) {
+                handleWebSocketMessage(event.data);
+            };
+            
+            websocket.onclose = function() {
+                console.log('WebSocket disconnected');
+                updateConnectionStatus(false);
+                // Retry connection after 3 seconds
+                setTimeout(initializeWebSocket, 3000);
+            };
+            
+            websocket.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                updateConnectionStatus(false);
+            };
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            try {
+                const message = JSON.parse(data);
+                
+                if (message.title === 'get_info') {
+                    updateSystemInfo(message.data);
+                }
+            } catch (e) {
+                // Handle text messages or sensor data
+                if (data.startsWith('SENSOR:')) {
+                    const distance = parseFloat(data.split(':')[1]);
+                    updateSensorReading(distance);
+                }
+            }
+        }
+
+        // Send command via WebSocket
+        function sendCommand(command) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(command);
+                console.log('Sent command:', command);
+                return true;
+            }
+            return false;
+        }
+
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            const statusDot = document.getElementById('ws-status');
+            const statusText = document.getElementById('connection-text');
+            
+            if (connected) {
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Connected';
+            } else {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Disconnected';
+            }
+        }
+
+        // Video stream initialization
+        function initializeVideoStream() {
+            const canvas = document.getElementById('video-canvas');
+            const ctx = canvas.getContext('2d');
+            const videoInfo = document.getElementById('video-info');
+            
+            function updateVideo() {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.src = `http://${location.hostname}:5000/video_feed?t=${Date.now()}`;
+                
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    videoInfo.textContent = `${canvas.width}×${canvas.height} - ${new Date().toLocaleTimeString()}`;
+                    document.getElementById('video-status').classList.add('connected');
+                };
+                
+                img.onerror = function() {
+                    videoInfo.textContent = 'Video stream unavailable';
+                    document.getElementById('video-status').classList.remove('connected');
+                };
+            }
+            
+            // Update video at 15 FPS
+            videoUpdateTimer = setInterval(updateVideo, 1000/15);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Movement and control buttons
+            document.querySelectorAll('.control-btn[data-command]').forEach(btn => {
+                btn.addEventListener('mousedown', function() {
+                    const command = this.dataset.command;
+                    sendCommand(command);
+                    this.classList.add('active');
+                    activeButtons.add(command);
+                });
+                
+                btn.addEventListener('mouseup', function() {
+                    const command = this.dataset.command;
+                    // Send stop command for movement buttons
+                    if (['forward', 'backward', 'left', 'right'].includes(command)) {
+                        sendCommand('DS'); // Direction Stop
+                    }
+                    this.classList.remove('active');
+                    activeButtons.delete(command);
+                });
+            });
+            
+            // Speed slider
+            const speedSlider = document.getElementById('speed-slider');
+            speedSlider.addEventListener('input', function() {
+                currentSpeed = this.value;
+                document.getElementById('speed-value').textContent = this.value;
+                sendCommand(`wsB ${this.value}`);
+            });
+            
+            // Sensor controls
+            document.getElementById('btn-sensor-continuous').addEventListener('click', function() {
+                sensorContinuous = !sensorContinuous;
+                this.classList.toggle('active');
+                
+                if (sensorContinuous) {
+                    this.textContent = '⏹️ Stop Reading';
+                    startContinuousSensorReading();
+                } else {
+                    this.textContent = '🔄 Continuous Reading';
+                    stopContinuousSensorReading();
+                }
+            });
+            
+            document.getElementById('btn-sensor-single').addEventListener('click', function() {
+                requestSensorReading();
+            });
+            
+            // Sensor rate slider
+            const rateSlider = document.getElementById('rate-slider');
+            rateSlider.addEventListener('input', function() {
+                sensorUpdateRate = this.value;
+                document.getElementById('rate-value').textContent = `${this.value} Hz`;
+                
+                if (sensorContinuous) {
+                    stopContinuousSensorReading();
+                    startContinuousSensorReading();
+                }
+            });
+            
+            // Video optimization buttons
+            setupVideoOptimizationControls();
+            
+            // Stop button
+            document.getElementById('btn-stop').addEventListener('click', function() {
+                sendCommand('DS'); // Direction Stop
+                sendCommand('TS'); // Turn Stop
+                // Stop all automatic functions
+                sendCommand('automaticOff');
+                sendCommand('trackLineOff');
+                sendCommand('stopCV');
+                sendCommand('policeOff');
+                
+                // Reset all active buttons
+                document.querySelectorAll('.control-btn.active').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                activeButtons.clear();
+            });
+        }
+
+        // Setup keyboard controls
+        function setupKeyboardControls() {
+            const keyMap = {
+                87: 'forward',  // W
+                83: 'backward', // S
+                65: 'left',     // A
+                68: 'right',    // D
+                32: 'stop'      // Space
+            };
+            
+            document.addEventListener('keydown', function(e) {
+                if (keyMap[e.keyCode] && !activeButtons.has(keyMap[e.keyCode])) {
+                    e.preventDefault();
+                    const command = keyMap[e.keyCode];
+                    sendCommand(command);
+                    activeButtons.add(command);
+                    
+                    // Visual feedback
+                    const btn = document.querySelector(`[data-key="${e.keyCode}"]`);
+                    if (btn) btn.classList.add('active');
+                }
+            });
+            
+            document.addEventListener('keyup', function(e) {
+                if (keyMap[e.keyCode]) {
+                    e.preventDefault();
+                    const command = keyMap[e.keyCode];
+                    
+                    if (command === 'stop') {
+                        sendCommand('DS');
+                        sendCommand('TS');
+                    } else if (['forward', 'backward', 'left', 'right'].includes(command)) {
+                        if (command === 'forward' || command === 'backward') {
+                            sendCommand('DS');
+                        } else {
+                            sendCommand('TS');
+                        }
+                    }
+                    
+                    activeButtons.delete(command);
+                    
+                    // Remove visual feedback
+                    const btn = document.querySelector(`[data-key="${e.keyCode}"]`);
+                    if (btn) btn.classList.remove('active');
+                }
+            });
+        }
+
+        // Video optimization controls
+        function setupVideoOptimizationControls() {
+            // Resolution buttons
+            document.getElementById('btn-res-high').addEventListener('click', function() {
+                sendCommand('videoResolution high');
+                document.getElementById('btn-res-opt').classList.remove('active');
+                this.classList.add('active');
+            });
+            
+            document.getElementById('btn-res-opt').addEventListener('click', function() {
+                sendCommand('videoResolution optimized');
+                document.getElementById('btn-res-high').classList.remove('active');
+                this.classList.add('active');
+            });
+            
+            // FPS buttons
+            document.getElementById('btn-fps-30').addEventListener('click', function() {
+                sendCommand('videoFPS 30');
+                document.getElementById('btn-fps-15').classList.remove('active');
+                this.classList.add('active');
+            });
+            
+            document.getElementById('btn-fps-15').addEventListener('click', function() {
+                sendCommand('videoFPS 15');
+                document.getElementById('btn-fps-30').classList.remove('active');
+                this.classList.add('active');
+            });
+            
+            // Quality buttons
+            document.getElementById('btn-qual-high').addEventListener('click', function() {
+                sendCommand('jpegQuality 95');
+                document.getElementById('btn-qual-opt').classList.remove('active');
+                this.classList.add('active');
+            });
+            
+            document.getElementById('btn-qual-opt').addEventListener('click', function() {
+                sendCommand('jpegQuality 60');
+                document.getElementById('btn-qual-high').classList.remove('active');
+                this.classList.add('active');
+            });
+        }
+
+        // Sensor functions
+        function startContinuousSensorReading() {
+            const interval = 1000 / sensorUpdateRate;
+            sensorReadTimer = setInterval(() => {
+                requestSensorReading();
+            }, interval);
+            
+            document.getElementById('sensor-status').classList.add('connected');
+            document.getElementById('sensor-status-text').textContent = `Reading at ${sensorUpdateRate} Hz`;
+        }
+
+        function stopContinuousSensorReading() {
+            if (sensorReadTimer) {
+                clearInterval(sensorReadTimer);
+                sensorReadTimer = null;
+            }
+            
+            document.getElementById('sensor-status').classList.remove('connected');
+            document.getElementById('sensor-status-text').textContent = 'Sensor Stopped';
+        }
+
+        function requestSensorReading() {
+            // Since we don't have direct sensor access, we'll simulate for now
+            // In the real implementation, this would request sensor data
+            sendCommand('SENSOR_READ');
+        }
+
+        function updateSensorReading(distance) {
+            currentDistance = distance;
+            
+            // Update display
+            document.getElementById('distance-value').textContent = `${distance.toFixed(1)} cm`;
+            document.getElementById('current-distance').textContent = `${distance.toFixed(1)} cm`;
+            
+            // Update progress bar
+            const maxDistance = 100; // cm
+            const percentage = Math.min(distance / maxDistance * 100, 100);
+            const bar = document.getElementById('distance-bar');
+            bar.style.width = `${percentage}%`;
+            
+            // Update bar color based on distance
+            bar.className = 'distance-fill';
+            if (distance > 40) {
+                bar.classList.add('distance-safe');
+            } else if (distance > 20) {
+                bar.classList.add('distance-warning');
+            } else {
+                bar.classList.add('distance-danger');
+            }
+            
+            // Add to history
+            sensorHistory.push({ time: Date.now(), distance: distance });
+            if (sensorHistory.length > 50) {
+                sensorHistory.shift();
+            }
+            
+            // Update chart
+            updateSensorChart();
+        }
+
+        // System info functions
+        function requestSystemInfo() {
+            sendCommand('get_info');
+        }
+
+        function updateSystemInfo(data) {
+            if (data && data.length >= 3) {
+                document.getElementById('cpu-usage').textContent = `${data[1]}%`;
+                document.getElementById('cpu-temp').textContent = `${data[0]}°C`;
+                document.getElementById('ram-usage').textContent = `${data[2]}%`;
+            }
+        }
+
+        // Sensor chart
+        function initializeSensorChart() {
+            // Initialize empty chart
+            updateSensorChart();
+        }
+
+        function updateSensorChart() {
+            const canvas = document.getElementById('sensor-chart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.fillStyle = 'rgba(0,0,0,0.3)';
+            ctx.fillRect(0, 0, width, height);
+            
+            if (sensorHistory.length < 2) return;
+            
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 5; i++) {
+                const y = (height / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width, y);
+                ctx.stroke();
+            }
+            
+            // Draw distance line
+            ctx.strokeStyle = '#64b5f6';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            const maxDistance = 100;
+            const timespan = 10000; // 10 seconds
+            const now = Date.now();
+            
+            sensorHistory.forEach((point, index) => {
+                const x = ((point.time - (now - timespan)) / timespan) * width;
+                const y = height - (point.distance / maxDistance * height);
+                
+                if (index === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            
+            ctx.stroke();
+            
+            // Draw current value
+            if (sensorHistory.length > 0) {
+                const lastPoint = sensorHistory[sensorHistory.length - 1];
+                const x = width - 10;
+                const y = height - (lastPoint.distance / maxDistance * height);
+                
+                ctx.fillStyle = '#64b5f6';
+                ctx.beginPath();
+                ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        // Request system info every 5 seconds
+        setInterval(requestSystemInfo, 5000);
+        
+        // Simulate sensor data for testing (remove in production)
+        let testDistance = 50;
+        setInterval(() => {
+            if (sensorContinuous) {
+                testDistance += (Math.random() - 0.5) * 10;
+                testDistance = Math.max(5, Math.min(100, testDistance));
+                updateSensorReading(testDistance);
+            }
+        }, 500);
+    </script>
+</body>
+</html>
