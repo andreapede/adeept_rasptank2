@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Stream Test - RaspTank</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .video-test {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .video-panel {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .video-panel h3 {
+            margin: 0 0 15px 0;
+            color: #555;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            max-width: 100%;
+        }
+        .controls {
+            margin-top: 15px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #007bff;
+            color: white;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #666;
+        }
+        .connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 RaspTank Video Stream Test</h1>
+        <p style="text-align: center; color: #666;">
+            Testing different video streaming approaches to identify the working method.
+        </p>
+
+        <div class="video-test">
+            <!-- Original Vue.js Method -->
+            <div class="video-panel">
+                <h3>Vue.js Method (Working)</h3>
+                <canvas id="vue-canvas" width="640" height="480"></canvas>
+                <div class="controls">
+                    <button onclick="startVueMethod()">Start Vue Method</button>
+                    <button onclick="stopVueMethod()">Stop</button>
+                </div>
+                <div id="vue-status" class="status">Stopped</div>
+            </div>
+
+            <!-- Advanced Controller Method -->
+            <div class="video-panel">
+                <h3>Advanced Method (Fixed)</h3>
+                <canvas id="advanced-canvas" width="640" height="480"></canvas>
+                <div class="controls">
+                    <button onclick="startAdvancedMethod()">Start Advanced Method</button>
+                    <button onclick="stopAdvancedMethod()">Stop</button>
+                </div>
+                <div id="advanced-status" class="status">Stopped</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px; padding: 15px; background: #e9ecef; border-radius: 8px;">
+            <h4>🔍 Debug Information:</h4>
+            <div id="debug-info" style="font-family: monospace; font-size: 12px;">
+                Waiting for tests to start...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let vueTimer = null;
+        let advancedTimer = null;
+        let vueRand = Math.random();
+        let advancedRand = Math.random();
+
+        // Vue.js Method (Exact copy from working code)
+        function startVueMethod() {
+            stopVueMethod(); // Stop any existing timer
+            
+            const canvas = document.getElementById('vue-canvas');
+            const ctx = canvas.getContext('2d');
+            const status = document.getElementById('vue-status');
+            
+            vueRand = Math.random(); // Fresh random ID
+            status.textContent = 'Starting Vue method...';
+            status.className = 'status';
+            
+            vueTimer = setInterval(function() {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.src = `http://${location.hostname}:5000/video_feed?rand=${vueRand}`;
+                
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, 640, 480);
+                    status.textContent = `Vue Method: Connected - ${new Date().toLocaleTimeString()}`;
+                    status.className = 'status connected';
+                    updateDebug('Vue method: Successfully loaded frame');
+                };
+                
+                img.onerror = function() {
+                    status.textContent = 'Vue Method: Connection failed';
+                    status.className = 'status disconnected';
+                    updateDebug('Vue method: Image load error');
+                };
+            }, 1000/24); // 24 FPS like original
+            
+            updateDebug(`Vue method started with URL: http://${location.hostname}:5000/video_feed?rand=${vueRand}`);
+        }
+
+        function stopVueMethod() {
+            if (vueTimer) {
+                clearInterval(vueTimer);
+                vueTimer = null;
+                document.getElementById('vue-status').textContent = 'Stopped';
+                document.getElementById('vue-status').className = 'status';
+                updateDebug('Vue method stopped');
+            }
+        }
+
+        // Advanced Method (Simplified version)
+        function startAdvancedMethod() {
+            stopAdvancedMethod(); // Stop any existing timer
+            
+            const canvas = document.getElementById('advanced-canvas');
+            const ctx = canvas.getContext('2d');
+            const status = document.getElementById('advanced-status');
+            
+            advancedRand = Math.random(); // Fresh random ID
+            status.textContent = 'Starting Advanced method...';
+            status.className = 'status';
+            
+            advancedTimer = setInterval(() => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.src = `http://${location.hostname}:5000/video_feed?rand=${advancedRand}`;
+                
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, 640, 480);
+                    status.textContent = `Advanced Method: Connected - ${new Date().toLocaleTimeString()}`;
+                    status.className = 'status connected';
+                    updateDebug('Advanced method: Successfully loaded frame');
+                };
+                
+                img.onerror = function() {
+                    status.textContent = 'Advanced Method: Connection failed';
+                    status.className = 'status disconnected';
+                    updateDebug('Advanced method: Image load error');
+                };
+            }, 1000/24); // Same 24 FPS
+            
+            updateDebug(`Advanced method started with URL: http://${location.hostname}:5000/video_feed?rand=${advancedRand}`);
+        }
+
+        function stopAdvancedMethod() {
+            if (advancedTimer) {
+                clearInterval(advancedTimer);
+                advancedTimer = null;
+                document.getElementById('advanced-status').textContent = 'Stopped';
+                document.getElementById('advanced-status').className = 'status';
+                updateDebug('Advanced method stopped');
+            }
+        }
+
+        // Debug helper
+        function updateDebug(message) {
+            const debugInfo = document.getElementById('debug-info');
+            const timestamp = new Date().toLocaleTimeString();
+            debugInfo.innerHTML = `${timestamp}: ${message}<br>` + debugInfo.innerHTML;
+            
+            // Keep only last 10 messages
+            const lines = debugInfo.innerHTML.split('<br>');
+            if (lines.length > 10) {
+                debugInfo.innerHTML = lines.slice(0, 10).join('<br>');
+            }
+        }
+
+        // Auto-start both methods for comparison
+        window.onload = function() {
+            updateDebug('Page loaded, auto-starting both methods...');
+            setTimeout(() => {
+                startVueMethod();
+                setTimeout(() => {
+                    startAdvancedMethod();
+                }, 1000);
+            }, 500);
+        };
+
+        // Cleanup on page unload
+        window.onbeforeunload = function() {
+            stopVueMethod();
+            stopAdvancedMethod();
+        };
+    </script>
+</body>
+</html>

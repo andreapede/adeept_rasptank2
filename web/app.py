@@ -70,6 +70,10 @@ def control_center():
 def advanced_controller():
     return send_from_directory(dir_path, 'advanced_controller.html')
 
+@app.route('/test')
+def video_test():
+    return send_from_directory(dir_path, 'video_test.html')
+
 class webapp:
     def __init__(self):
         self.camera = camera
