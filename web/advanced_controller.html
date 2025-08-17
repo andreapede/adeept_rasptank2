@@ -217,58 +217,6 @@
             cursor: not-allowed;
         }
 
-        /* Optimization Controls */
-        .optimization-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .optimization-label {
-            font-weight: 500;
-            color: #ffffff;
-            font-size: 14px;
-            min-width: 120px;
-        }
-
-        .toggle-group {
-            display: flex;
-            border-radius: 6px;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.2);
-        }
-
-        .toggle-btn {
-            padding: 8px 16px;
-            background: rgba(255,255,255,0.05);
-            color: #ffffff;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 12px;
-            font-weight: 500;
-            border-right: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .toggle-btn:last-child {
-            border-right: none;
-        }
-
-        .toggle-btn:hover {
-            background: rgba(100,181,246,0.2);
-        }
-
-        .toggle-btn.active {
-            background: rgba(76,175,80,0.4);
-            color: #ffffff;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-        }
-
         /* Sensor Display */
         .sensor-display {
             text-align: center;
@@ -646,38 +594,6 @@
                         <span id="video-info">Connecting...</span>
                     </div>
                 </div>
-                
-                <!-- Video Optimization Controls -->
-                <div class="control-section" style="width: 100%;">
-                    <h3>Stream Optimization</h3>
-                    
-                    <!-- Resolution Toggle -->
-                    <div class="optimization-row">
-                        <label class="optimization-label">📺 Resolution:</label>
-                        <div class="toggle-group">
-                            <button class="toggle-btn" id="btn-res-low">Low</button>
-                            <button class="toggle-btn active" id="btn-res-high">High</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Frame Rate Toggle -->
-                    <div class="optimization-row">
-                        <label class="optimization-label">🎬 Frame Rate:</label>
-                        <div class="toggle-group">
-                            <button class="toggle-btn active" id="btn-fps-15">15 FPS</button>
-                            <button class="toggle-btn" id="btn-fps-30">30 FPS</button>
-                        </div>
-                    </div>
-                    
-                    <!-- JPEG Quality Toggle -->
-                    <div class="optimization-row">
-                        <label class="optimization-label">🖼️ JPEG Quality:</label>
-                        <div class="toggle-group">
-                            <button class="toggle-btn" id="btn-qual-65">65%</button>
-                            <button class="toggle-btn active" id="btn-qual-90">90%</button>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
 
@@ -993,27 +909,193 @@
             window.restartVideoStream = startVideoTimer;
         }
 
+        // Setup servo button with pulse/hold behavior
+        function setupServoButton(button, command) {
+            let holdTimer = null;
+            let isHolding = false;
+            let pulseTimeout = null;
+            
+            // Mouse/Touch down
+            button.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                startServoAction(this, command);
+            });
+            
+            button.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                startServoAction(this, command);
+            });
+            
+            // Mouse/Touch up
+            button.addEventListener('mouseup', function(e) {
+                e.preventDefault();
+                stopServoAction(this, command);
+            });
+            
+            button.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                stopServoAction(this, command);
+            });
+            
+            // Mouse leave (in case user drags off button)
+            button.addEventListener('mouseleave', function(e) {
+                if (holdTimer || isHolding) {
+                    stopServoAction(this, command);
+                }
+            });
+            
+            function startServoAction(btn, cmd) {
+                // Immediate pulse (10 degrees)
+                sendCommand(cmd);
+                trackServoCommand(cmd);
+                btn.classList.add('active');
+                
+                // Set timer for hold behavior (1 second)
+                holdTimer = setTimeout(() => {
+                    // After 1 second, move to end course
+                    isHolding = true;
+                    moveToEndCourse(cmd);
+                    console.log(`Servo ${cmd}: Moving to end course after 1s hold`);
+                }, 1000);
+                
+                console.log(`Servo ${cmd}: 10° pulse sent`);
+            }
+            
+            function stopServoAction(btn, cmd) {
+                // Clear hold timer if still waiting
+                if (holdTimer) {
+                    clearTimeout(holdTimer);
+                    holdTimer = null;
+                }
+                
+                // Stop servo movement
+                const stopCommand = getServoStopCommand(cmd);
+                if (stopCommand) {
+                    sendCommand(stopCommand);
+                }
+                
+                btn.classList.remove('active');
+                isHolding = false;
+                
+                console.log(`Servo ${cmd}: Stopped`);
+            }
+            
+            function moveToEndCourse(cmd) {
+                // Determine end course position based on command
+                let targetAngle = 0;
+                let servoType = '';
+                
+                switch(cmd) {
+                    case 'up':
+                        targetAngle = 0; servoType = 'camera'; break;
+                    case 'down':
+                        targetAngle = 180; servoType = 'camera'; break;
+                    case 'armUp':
+                        targetAngle = 0; servoType = 'arm'; break;
+                    case 'armDown':
+                        targetAngle = 180; servoType = 'arm'; break;
+                    case 'handUp':
+                        targetAngle = 0; servoType = 'hand'; break;
+                    case 'handDown':
+                        targetAngle = 180; servoType = 'hand'; break;
+                    case 'lookleft':
+                        targetAngle = 0; servoType = 'wrist'; break;
+                    case 'lookright':
+                        targetAngle = 180; servoType = 'wrist'; break;
+                    case 'grab':
+                        targetAngle = 0; servoType = 'gripper'; break;
+                    case 'loose':
+                        targetAngle = 180; servoType = 'gripper'; break;
+                }
+                
+                // Update servo status to end position
+                if (servoType) {
+                    updateServoStatus(servoType, targetAngle);
+                }
+                
+                // Keep sending command until we reach end course
+                const moveToEndInterval = setInterval(() => {
+                    if (!isHolding) {
+                        clearInterval(moveToEndInterval);
+                        return;
+                    }
+                    sendCommand(cmd);
+                }, 50); // Send command every 50ms while holding
+            }
+            
+            function getServoStopCommand(cmd) {
+                const stopCommands = {
+                    'up': 'UDstop',
+                    'down': 'UDstop',
+                    'armUp': 'armStop',
+                    'armDown': 'armStop',
+                    'handUp': 'handStop',
+                    'handDown': 'handStop',
+                    'lookleft': 'LRstop',
+                    'lookright': 'LRstop',
+                    'grab': 'GLstop',
+                    'loose': 'GLstop'
+                };
+                return stopCommands[cmd] || null;
+            }
+        }
+
         // Setup event listeners
         function setupEventListeners() {
-            // Movement and control buttons
+            // Servo command lists
+            const servoCommands = ['up', 'down', 'armUp', 'armDown', 'handUp', 'handDown', 
+                                 'lookleft', 'lookright', 'grab', 'loose'];
+            const motorCommands = ['forward', 'backward', 'left', 'right'];
+            
+            // Setup servo buttons with special pulse/hold behavior
+            servoCommands.forEach(command => {
+                const btn = document.querySelector(`[data-command="${command}"]`);
+                if (btn) {
+                    setupServoButton(btn, command);
+                }
+            });
+            
+            // Setup regular movement buttons
             document.querySelectorAll('.control-btn[data-command]').forEach(btn => {
+                const command = btn.dataset.command;
+                
+                // Skip servo buttons as they have their own handlers
+                if (servoCommands.includes(command)) {
+                    return;
+                }
+                
+                // Regular button behavior for motors and other commands
                 btn.addEventListener('mousedown', function() {
-                    const command = this.dataset.command;
                     sendCommand(command);
                     this.classList.add('active');
                     activeButtons.add(command);
                 });
                 
                 btn.addEventListener('mouseup', function() {
-                    const command = this.dataset.command;
                     // Send stop command for movement buttons
-                    if (['forward', 'backward', 'left', 'right'].includes(command)) {
+                    if (motorCommands.includes(command)) {
                         sendCommand('DS'); // Direction Stop
                     }
                     this.classList.remove('active');
                     activeButtons.delete(command);
                 });
             });
+            
+            // Setup camera center button (no data-command attribute)
+            const centerBtn = document.getElementById('btn-cam-center');
+            if (centerBtn) {
+                centerBtn.addEventListener('click', function() {
+                    // Send camera center command (this should center the camera servo)
+                    sendCommand('home'); // or specific camera center command
+                    trackServoCommand('home');
+                    
+                    // Brief visual feedback
+                    this.classList.add('active');
+                    setTimeout(() => {
+                        this.classList.remove('active');
+                    }, 200);
+                });
+            }
             
             // Speed slider
             const speedSlider = document.getElementById('speed-slider');
@@ -1053,8 +1135,6 @@
                 }
             });
             
-            // Video optimization buttons
-            setupVideoOptimizationControls();
             
             // Emergency stop function - stops all motors and servos
             function emergencyStopAll() {
@@ -1071,21 +1151,47 @@
                 sendCommand('UDstop');     // Stop camera tilt servo (Up/Down stop)
                 
                 // Stop all automatic functions
-                sendCommand('automaticOff');
-                sendCommand('trackLineOff');
-                sendCommand('stopCV');
-                sendCommand('policeOff');
+                sendCommand('automaticOff');   // Stop auto navigation
+                sendCommand('trackLineOff');   // Stop line following
+                sendCommand('findColorOff');   // Stop color tracking
+                sendCommand('stopCV');         // Stop computer vision
+                sendCommand('policeOff');      // Stop police lights
+                
+                // Additional safety stops
+                sendCommand('buzzer0');        // Turn off buzzer if active
+                sendCommand('colorFindOff');   // Alternative color stop command
+                
+                // Stop any continuous sensor reading
+                if (sensorReadTimer) {
+                    clearInterval(sensorReadTimer);
+                    sensorReadTimer = null;
+                    sensorContinuous = false;
+                }
                 
                 // Update motor status display to show stopped
                 updateMotorStatus(0, 0);
                 
-                // Reset all active buttons
+                // Reset all active buttons and their visual state
                 document.querySelectorAll('.control-btn.active').forEach(btn => {
                     btn.classList.remove('active');
                 });
+                
+                // Reset automatic function button states
+                document.getElementById('btn-automatic')?.classList.remove('active');
+                document.getElementById('btn-line-follow')?.classList.remove('active');
+                document.getElementById('btn-color-track')?.classList.remove('active');
+                document.getElementById('btn-police')?.classList.remove('active');
+                document.getElementById('btn-sensor-continuous')?.classList.remove('active');
+                
+                // Reset sensor continuous button text
+                const sensorBtn = document.getElementById('btn-sensor-continuous');
+                if (sensorBtn) {
+                    sensorBtn.textContent = '🔄 Continuous Reading';
+                }
+                
                 activeButtons.clear();
                 
-                console.log('🛑 EMERGENCY STOP: All motors and servos stopped');
+                console.log('🛑 EMERGENCY STOP: All motors, servos, and automatic functions stopped');
             }
             
             // Stop button
@@ -1163,60 +1269,6 @@
                     console.log('Video stream restarted');
                 }
             }, 1000); // 1 second delay for server processing
-        }
-
-        // Video optimization controls
-        function setupVideoOptimizationControls() {
-            // Resolution toggle buttons
-            document.getElementById('btn-res-low').addEventListener('click', function() {
-                sendCommand('videoResolution low');
-                document.getElementById('btn-res-high').classList.remove('active');
-                this.classList.add('active');
-                console.log('Set resolution to low');
-                reloadVideoStream();
-            });
-            
-            document.getElementById('btn-res-high').addEventListener('click', function() {
-                sendCommand('videoResolution high');
-                document.getElementById('btn-res-low').classList.remove('active');
-                this.classList.add('active');
-                console.log('Set resolution to high');
-                reloadVideoStream();
-            });
-            
-            // FPS toggle buttons
-            document.getElementById('btn-fps-15').addEventListener('click', function() {
-                sendCommand('videoFPS 15');
-                document.getElementById('btn-fps-30').classList.remove('active');
-                this.classList.add('active');
-                console.log('Set FPS to 15');
-                reloadVideoStream();
-            });
-            
-            document.getElementById('btn-fps-30').addEventListener('click', function() {
-                sendCommand('videoFPS 30');
-                document.getElementById('btn-fps-15').classList.remove('active');
-                this.classList.add('active');
-                console.log('Set FPS to 30');
-                reloadVideoStream();
-            });
-            
-            // JPEG Quality toggle buttons
-            document.getElementById('btn-qual-65').addEventListener('click', function() {
-                sendCommand('jpegQuality 65');
-                document.getElementById('btn-qual-90').classList.remove('active');
-                this.classList.add('active');
-                console.log('Set JPEG quality to 65%');
-                reloadVideoStream();
-            });
-            
-            document.getElementById('btn-qual-90').addEventListener('click', function() {
-                sendCommand('jpegQuality 90');
-                document.getElementById('btn-qual-65').classList.remove('active');
-                this.classList.add('active');
-                console.log('Set JPEG quality to 90%');
-                reloadVideoStream();
-            });
         }
 
         // Sensor functions
