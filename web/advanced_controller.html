@@ -192,6 +192,58 @@
             cursor: not-allowed;
         }
 
+        /* Optimization Controls */
+        .optimization-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .optimization-label {
+            font-weight: 500;
+            color: #ffffff;
+            font-size: 14px;
+            min-width: 120px;
+        }
+
+        .toggle-group {
+            display: flex;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .toggle-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.05);
+            color: #ffffff;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 12px;
+            font-weight: 500;
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .toggle-btn:last-child {
+            border-right: none;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(100,181,246,0.2);
+        }
+
+        .toggle-btn.active {
+            background: rgba(76,175,80,0.4);
+            color: #ffffff;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
         /* Sensor Display */
         .sensor-display {
             text-align: center;
@@ -295,6 +347,97 @@
         .info-value {
             color: #64b5f6;
             font-weight: 500;
+        }
+
+        /* Servo & Motors Status */
+        .status-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .status-group h4 {
+            margin: 0 0 12px 0;
+            color: #64b5f6;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .servo-status-grid, .motor-status-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .servo-item, .motor-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .servo-label, .motor-label {
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .servo-value, .motor-value {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .servo-bar, .motor-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .servo-fill {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: #4caf50;
+            border-radius: 1px;
+            transition: left 0.3s ease;
+        }
+
+        .motor-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .motor-fill.motor-forward {
+            background: #4caf50;
+        }
+
+        .motor-fill.motor-backward {
+            background: #ff9800;
+        }
+
+        .motor-direction {
+            font-size: 10px;
+            color: #b0bec5;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        #servo-pan-angle, #servo-tilt-angle {
+            color: #4caf50;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        #motor-left-speed, #motor-right-speed {
+            color: #64b5f6;
+            font-weight: 600;
+            font-size: 12px;
         }
 
         /* Responsive */
@@ -445,13 +588,32 @@
                 <!-- Video Optimization Controls -->
                 <div class="control-section" style="width: 100%;">
                     <h3>Stream Optimization</h3>
-                    <div class="button-grid grid-3x3">
-                        <button class="control-btn" id="btn-res-high">📺 HD</button>
-                        <button class="control-btn active" id="btn-res-opt">⚡ Optimized</button>
-                        <button class="control-btn" id="btn-fps-30">🎬 30 FPS</button>
-                        <button class="control-btn active" id="btn-fps-15">⚡ 15 FPS</button>
-                        <button class="control-btn" id="btn-qual-high">🖼️ HQ</button>
-                        <button class="control-btn active" id="btn-qual-opt">⚡ Fast</button>
+                    
+                    <!-- Resolution Toggle -->
+                    <div class="optimization-row">
+                        <label class="optimization-label">📺 Resolution:</label>
+                        <div class="toggle-group">
+                            <button class="toggle-btn" id="btn-res-low">Low</button>
+                            <button class="toggle-btn active" id="btn-res-high">High</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Frame Rate Toggle -->
+                    <div class="optimization-row">
+                        <label class="optimization-label">🎬 Frame Rate:</label>
+                        <div class="toggle-group">
+                            <button class="toggle-btn active" id="btn-fps-15">15 FPS</button>
+                            <button class="toggle-btn" id="btn-fps-30">30 FPS</button>
+                        </div>
+                    </div>
+                    
+                    <!-- JPEG Quality Toggle -->
+                    <div class="optimization-row">
+                        <label class="optimization-label">🖼️ JPEG Quality:</label>
+                        <div class="toggle-group">
+                            <button class="toggle-btn" id="btn-qual-65">65%</button>
+                            <button class="toggle-btn active" id="btn-qual-90">90%</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -510,6 +672,90 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Servo & Motors Status -->
+            <div class="control-section">
+                <h2>🔧 Servo & Motors Status</h2>
+                
+                <!-- Servo Status -->
+                <div class="status-group">
+                    <h4>🦾 Servo Motors (5 total)</h4>
+                    <div class="servo-status-grid">
+                        <div class="servo-item">
+                            <span class="servo-label">Arm (Up/Down)</span>
+                            <div class="servo-value">
+                                <span id="servo-arm-angle">90°</span>
+                                <div class="servo-bar">
+                                    <div class="servo-fill" id="servo-arm-bar" style="left: 50%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="servo-item">
+                            <span class="servo-label">Hand/Forearm (Up/Down)</span>
+                            <div class="servo-value">
+                                <span id="servo-hand-angle">90°</span>
+                                <div class="servo-bar">
+                                    <div class="servo-fill" id="servo-hand-bar" style="left: 50%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="servo-item">
+                            <span class="servo-label">Wrist Rotation (Left/Right)</span>
+                            <div class="servo-value">
+                                <span id="servo-wrist-angle">90°</span>
+                                <div class="servo-bar">
+                                    <div class="servo-fill" id="servo-wrist-bar" style="left: 50%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="servo-item">
+                            <span class="servo-label">Gripper (Open/Close)</span>
+                            <div class="servo-value">
+                                <span id="servo-gripper-angle">90°</span>
+                                <div class="servo-bar">
+                                    <div class="servo-fill" id="servo-gripper-bar" style="left: 50%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="servo-item">
+                            <span class="servo-label">Camera Tilt (Up/Down)</span>
+                            <div class="servo-value">
+                                <span id="servo-camera-angle">90°</span>
+                                <div class="servo-bar">
+                                    <div class="servo-fill" id="servo-camera-bar" style="left: 50%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Motors -->
+                <div class="status-group">
+                    <h4>⚙️ Drive Motors</h4>
+                    <div class="motor-status-grid">
+                        <div class="motor-item">
+                            <span class="motor-label">Left Motor</span>
+                            <div class="motor-value">
+                                <span id="motor-left-speed">0%</span>
+                                <div class="motor-bar">
+                                    <div class="motor-fill motor-forward" id="motor-left-bar" style="width: 0%;"></div>
+                                </div>
+                                <span class="motor-direction" id="motor-left-dir">STOP</span>
+                            </div>
+                        </div>
+                        <div class="motor-item">
+                            <span class="motor-label">Right Motor</span>
+                            <div class="motor-value">
+                                <span id="motor-right-speed">0%</span>
+                                <div class="motor-bar">
+                                    <div class="motor-fill motor-forward" id="motor-right-bar" style="width: 0%;"></div>
+                                </div>
+                                <span class="motor-direction" id="motor-right-dir">STOP</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -525,6 +771,19 @@
         let sensorUpdateRate = 10;
         let activeButtons = new Set();
 
+        // Servo and motor status tracking
+        let servoStatus = {
+            arm: 90,        // Arm servo angle (0-180) - armUp/armDown
+            hand: 90,       // Hand/forearm servo angle (0-180) - handUp/handDown  
+            wrist: 90,      // Wrist rotation servo angle (0-180) - lookleft/lookright
+            gripper: 90,    // Gripper servo angle (0-180) - grab/loose
+            camera: 90      // Camera tilt servo angle (0-180) - up/down
+        };
+        let motorStatus = {
+            left: { speed: 0, direction: 'stop' },    // Left motor: speed (-100 to 100), direction: forward/backward/stop
+            right: { speed: 0, direction: 'stop' }    // Right motor: speed (-100 to 100), direction: forward/backward/stop
+        };
+
         // Initialize on page load
         window.addEventListener('load', function() {
             initializeWebSocket();
@@ -532,6 +791,7 @@
             initializeSensorChart();
             setupEventListeners();
             setupKeyboardControls();
+            initializeServoMotorDisplay();
         });
 
         // WebSocket connection
@@ -593,6 +853,18 @@
             if (websocket && websocket.readyState === WebSocket.OPEN) {
                 websocket.send(command);
                 console.log('Sent command:', command);
+                
+                // Track motor and servo commands to update status display
+                const motorCommands = ['forward', 'backward', 'left', 'right', 'stop'];
+                const servoCommands = ['up', 'down', 'armUp', 'armDown', 'handUp', 'handDown', 
+                                     'lookleft', 'lookright', 'grab', 'loose', 'home'];
+                
+                if (motorCommands.includes(command)) {
+                    trackMotorCommand(command);
+                } else if (servoCommands.includes(command)) {
+                    trackServoCommand(command);
+                }
+                
                 return true;
             }
             return false;
@@ -803,32 +1075,24 @@
 
         // Video optimization controls
         function setupVideoOptimizationControls() {
-            // Resolution buttons
-            document.getElementById('btn-res-high').addEventListener('click', function() {
-                sendCommand('videoResolution high');
-                document.getElementById('btn-res-opt').classList.remove('active');
-                this.classList.add('active');
-                console.log('Set resolution to high quality');
-                reloadVideoStream();
-            });
-            
-            document.getElementById('btn-res-opt').addEventListener('click', function() {
-                sendCommand('videoResolution optimized');
+            // Resolution toggle buttons
+            document.getElementById('btn-res-low').addEventListener('click', function() {
+                sendCommand('videoResolution low');
                 document.getElementById('btn-res-high').classList.remove('active');
                 this.classList.add('active');
-                console.log('Set resolution to optimized');
+                console.log('Set resolution to low');
                 reloadVideoStream();
             });
             
-            // FPS buttons
-            document.getElementById('btn-fps-30').addEventListener('click', function() {
-                sendCommand('videoFPS 30');
-                document.getElementById('btn-fps-15').classList.remove('active');
+            document.getElementById('btn-res-high').addEventListener('click', function() {
+                sendCommand('videoResolution high');
+                document.getElementById('btn-res-low').classList.remove('active');
                 this.classList.add('active');
-                console.log('Set FPS to 30');
+                console.log('Set resolution to high');
                 reloadVideoStream();
             });
             
+            // FPS toggle buttons
             document.getElementById('btn-fps-15').addEventListener('click', function() {
                 sendCommand('videoFPS 15');
                 document.getElementById('btn-fps-30').classList.remove('active');
@@ -837,20 +1101,28 @@
                 reloadVideoStream();
             });
             
-            // Quality buttons
-            document.getElementById('btn-qual-high').addEventListener('click', function() {
-                sendCommand('jpegQuality 95');
-                document.getElementById('btn-qual-opt').classList.remove('active');
+            document.getElementById('btn-fps-30').addEventListener('click', function() {
+                sendCommand('videoFPS 30');
+                document.getElementById('btn-fps-15').classList.remove('active');
                 this.classList.add('active');
-                console.log('Set quality to high');
+                console.log('Set FPS to 30');
                 reloadVideoStream();
             });
             
-            document.getElementById('btn-qual-opt').addEventListener('click', function() {
-                sendCommand('jpegQuality 60');
-                document.getElementById('btn-qual-high').classList.remove('active');
+            // JPEG Quality toggle buttons
+            document.getElementById('btn-qual-65').addEventListener('click', function() {
+                sendCommand('jpegQuality 65');
+                document.getElementById('btn-qual-90').classList.remove('active');
                 this.classList.add('active');
-                console.log('Set quality to optimized');
+                console.log('Set JPEG quality to 65%');
+                reloadVideoStream();
+            });
+            
+            document.getElementById('btn-qual-90').addEventListener('click', function() {
+                sendCommand('jpegQuality 90');
+                document.getElementById('btn-qual-65').classList.remove('active');
+                this.classList.add('active');
+                console.log('Set JPEG quality to 90%');
                 reloadVideoStream();
             });
         }
@@ -990,6 +1262,157 @@
                 ctx.arc(x, y, 4, 0, 2 * Math.PI);
                 ctx.fill();
             }
+        }
+
+        // Servo and motor status update functions
+        function updateServoStatus(servo, angle) {
+            // Ensure angle is within valid range
+            angle = Math.max(0, Math.min(180, angle));
+            servoStatus[servo] = angle;
+            
+            // Update servo display
+            document.getElementById(`servo-${servo}-angle`).textContent = angle + '°';
+            const percent = (angle / 180) * 100;
+            document.getElementById(`servo-${servo}-bar`).style.left = percent + '%';
+        }
+
+        function updateAllServosDisplay() {
+            // Update all servo displays
+            Object.keys(servoStatus).forEach(servo => {
+                updateServoStatus(servo, servoStatus[servo]);
+            });
+        }
+
+        function updateMotorStatus(leftSpeed, rightSpeed) {
+            // Update left motor
+            motorStatus.left.speed = Math.abs(leftSpeed);
+            motorStatus.left.direction = leftSpeed > 0 ? 'forward' : leftSpeed < 0 ? 'backward' : 'stop';
+            
+            const leftBar = document.getElementById('motor-left-bar');
+            const leftDir = document.getElementById('motor-left-dir');
+            const leftSpeedElement = document.getElementById('motor-left-speed');
+            
+            leftSpeedElement.textContent = motorStatus.left.speed + '%';
+            leftBar.style.width = motorStatus.left.speed + '%';
+            leftDir.textContent = motorStatus.left.direction.toUpperCase();
+            
+            leftBar.className = 'motor-fill motor-' + motorStatus.left.direction;
+            
+            // Update right motor
+            motorStatus.right.speed = Math.abs(rightSpeed);
+            motorStatus.right.direction = rightSpeed > 0 ? 'forward' : rightSpeed < 0 ? 'backward' : 'stop';
+            
+            const rightBar = document.getElementById('motor-right-bar');
+            const rightDir = document.getElementById('motor-right-dir');
+            const rightSpeedElement = document.getElementById('motor-right-speed');
+            
+            rightSpeedElement.textContent = motorStatus.right.speed + '%';
+            rightBar.style.width = motorStatus.right.speed + '%';
+            rightDir.textContent = motorStatus.right.direction.toUpperCase();
+            
+            rightBar.className = 'motor-fill motor-' + motorStatus.right.direction;
+        }
+
+        // Track motor commands and update status
+        function trackMotorCommand(command) {
+            // Calculate motor speeds based on movement command and current speed
+            const speed = currentSpeed;
+            
+            switch(command) {
+                case 'forward':
+                    updateMotorStatus(speed, speed);
+                    break;
+                case 'backward':
+                    updateMotorStatus(-speed, -speed);
+                    break;
+                case 'left':
+                    updateMotorStatus(-speed * 0.5, speed);
+                    break;
+                case 'right':
+                    updateMotorStatus(speed, -speed * 0.5);
+                    break;
+                case 'stop':
+                default:
+                    updateMotorStatus(0, 0);
+                    break;
+            }
+        }
+
+        // Track servo commands and update status
+        function trackServoCommand(command) {
+            const servoStep = 10; // degrees per command
+            
+            switch(command) {
+                // Camera tilt commands
+                case 'up':
+                    servoStatus.camera = Math.max(0, servoStatus.camera - servoStep);
+                    updateServoStatus('camera', servoStatus.camera);
+                    break;
+                case 'down':
+                    servoStatus.camera = Math.min(180, servoStatus.camera + servoStep);
+                    updateServoStatus('camera', servoStatus.camera);
+                    break;
+                    
+                // Arm commands  
+                case 'armUp':
+                    servoStatus.arm = Math.max(0, servoStatus.arm - servoStep);
+                    updateServoStatus('arm', servoStatus.arm);
+                    break;
+                case 'armDown':
+                    servoStatus.arm = Math.min(180, servoStatus.arm + servoStep);
+                    updateServoStatus('arm', servoStatus.arm);
+                    break;
+                    
+                // Hand/forearm commands
+                case 'handUp':
+                    servoStatus.hand = Math.max(0, servoStatus.hand - servoStep);
+                    updateServoStatus('hand', servoStatus.hand);
+                    break;
+                case 'handDown':
+                    servoStatus.hand = Math.min(180, servoStatus.hand + servoStep);
+                    updateServoStatus('hand', servoStatus.hand);
+                    break;
+                    
+                // Wrist rotation commands
+                case 'lookleft':
+                    servoStatus.wrist = Math.max(0, servoStatus.wrist - servoStep);
+                    updateServoStatus('wrist', servoStatus.wrist);
+                    break;
+                case 'lookright':
+                    servoStatus.wrist = Math.min(180, servoStatus.wrist + servoStep);
+                    updateServoStatus('wrist', servoStatus.wrist);
+                    break;
+                    
+                // Gripper commands
+                case 'grab':
+                    servoStatus.gripper = Math.max(0, servoStatus.gripper - servoStep);
+                    updateServoStatus('gripper', servoStatus.gripper);
+                    break;
+                case 'loose':
+                    servoStatus.gripper = Math.min(180, servoStatus.gripper + servoStep);
+                    updateServoStatus('gripper', servoStatus.gripper);
+                    break;
+                    
+                // Home command - reset all servos to center
+                case 'home':
+                    Object.keys(servoStatus).forEach(servo => {
+                        servoStatus[servo] = 90;
+                        updateServoStatus(servo, 90);
+                    });
+                    break;
+            }
+        }
+
+        // Initialize servo and motor displays
+        function initializeServoMotorDisplay() {
+            // Initialize all servos to center position (90 degrees)
+            Object.keys(servoStatus).forEach(servo => {
+                servoStatus[servo] = 90;
+                updateServoStatus(servo, 90);
+            });
+            
+            // Initialize motors to stop
+            updateMotorStatus(0, 0);
         }
 
         // Request system info every 5 seconds
