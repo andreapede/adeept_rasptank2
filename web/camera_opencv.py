@@ -38,6 +38,10 @@ findLineError = 20
 turn_speed = 50 # Range of values: 0-100
 forward_speed = 50 # Avoid too fast, the video screen does not respond in time. Range of values: 0-100.
 
+# Video optimization settings
+video_resolution = "high"  # "high" (640x480) or "optimized" (480x360)
+video_fps = 30  # Target FPS: 30 (high) or 15 (optimized)
+jpeg_quality = 95  # JPEG quality: 95 (high) or 60 (optimized)
 
 hflip = 0 # Video flip horizontally: 0 or 1 
 vflip = 0 # Video vertical flip: 0/1 
@@ -469,6 +473,21 @@ class Camera(BaseCamera):
         global Threshold
         return Threshold
 
+    def setVideoResolution(self, resolution):
+        global video_resolution
+        video_resolution = resolution
+        print(f"Video resolution set to: {resolution}")
+    
+    def setVideoFPS(self, fps):
+        global video_fps
+        video_fps = fps
+        print(f"Video FPS set to: {fps}")
+    
+    def setJPEGQuality(self, quality):
+        global jpeg_quality
+        jpeg_quality = quality
+        print(f"JPEG quality set to: {quality}")
+
     @staticmethod
     def set_video_source(source):
         Camera.video_source = source
@@ -477,17 +496,23 @@ class Camera(BaseCamera):
 
     @staticmethod
     def frames():
-        global ImgIsNone,hflip,vflip
+        global ImgIsNone,hflip,vflip,video_resolution,video_fps,jpeg_quality
         picam2 = Picamera2() 
         
         preview_config = picam2.preview_configuration
-        preview_config.size = (640, 480)
+        
+        # Dynamic resolution based on setting
+        if video_resolution == "optimized":
+            preview_config.size = (480, 360)
+        else:  # "high"
+            preview_config.size = (640, 480)
+            
         preview_config.format = 'RGB888'  # 'XRGB8888', 'XBGR8888', 'RGB888', 'BGR888', 'YUV420'
         # hflip = 0
         # vflip = 0
         preview_config.transform = libcamera.Transform(hflip=hflip, vflip=vflip)
         preview_config.colour_space = libcamera.ColorSpace.Sycc()
-        preview_config.buffer_count = 4
+        preview_config.buffer_count = 8  # Increased buffer count for smoother capture
         preview_config.queue = True
 
         if not picam2.is_open:
@@ -503,8 +528,20 @@ class Camera(BaseCamera):
         cvt = CVThread()
         cvt.start()
 
+        # Frame rate control
+        frame_time = 1.0 / video_fps
+        last_frame_time = time.time()
+
         while True:
-            start_time = time.time()
+            current_time = time.time()
+            
+            # Frame rate limiting
+            time_elapsed = current_time - last_frame_time
+            if time_elapsed < frame_time:
+                time.sleep(frame_time - time_elapsed)
+            
+            last_frame_time = time.time()
+            
             # read current frame
             img = picam2.capture_array()
 
@@ -537,6 +574,8 @@ class Camera(BaseCamera):
                 except:
                     pass
             
-            if cv2.imencode('.jpg', img)[0]:
-                yield cv2.imencode('.jpg', img)[1].tobytes()
+            # Dynamic JPEG encoding with quality control
+            encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), jpeg_quality]
+            if cv2.imencode('.jpg', img, encode_param)[0]:
+                yield cv2.imencode('.jpg', img, encode_param)[1].tobytes()
             

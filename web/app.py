@@ -58,6 +58,14 @@ def sendgen(filename):
 def index():
     return send_from_directory(dir_path+'/dist', 'index.html')
 
+@app.route('/optimization')
+def optimization():
+    return send_from_directory(dir_path, 'video_optimization.html')
+
+@app.route('/control')
+def control_center():
+    return send_from_directory(dir_path, 'control_center.html')
+
 class webapp:
     def __init__(self):
         self.camera = camera

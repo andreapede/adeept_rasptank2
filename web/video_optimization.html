@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Optimization Controls - RaspTank</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .control-group {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .control-group h3 {
+            margin: 0 0 15px 0;
+            color: #444;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 12px 20px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        button.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+        button:hover {
+            border-color: #007bff;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .status.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .status.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        .info {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            color: #0d47a1;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+        }
+        .current-settings {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+        }
+        .current-settings h4 {
+            margin: 0 0 10px 0;
+            color: #495057;
+        }
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        .setting-value {
+            font-weight: bold;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Video Stream Optimization</h1>
+        
+        <div class="info">
+            <strong>Info:</strong> These settings control video quality and performance. 
+            Lower settings reduce latency but decrease quality. Changes take effect immediately.
+        </div>
+
+        <!-- Resolution Control -->
+        <div class="control-group">
+            <h3>📏 Video Resolution</h3>
+            <div class="button-group">
+                <button id="res-high" onclick="setResolution('high')">High Quality (640×480)</button>
+                <button id="res-optimized" onclick="setResolution('optimized')" class="active">Optimized (480×360)</button>
+            </div>
+            <div class="status success" id="res-status">Current: Optimized (480×360) - Recommended for reduced latency</div>
+        </div>
+
+        <!-- Frame Rate Control -->
+        <div class="control-group">
+            <h3>⚡ Frame Rate</h3>
+            <div class="button-group">
+                <button id="fps-30" onclick="setFPS(30)">High FPS (30 fps)</button>
+                <button id="fps-15" onclick="setFPS(15)" class="active">Optimized (15 fps)</button>
+            </div>
+            <div class="status success" id="fps-status">Current: 15 FPS - Optimized for smooth web streaming</div>
+        </div>
+
+        <!-- JPEG Quality Control -->
+        <div class="control-group">
+            <h3>🖼️ Image Quality</h3>
+            <div class="button-group">
+                <button id="quality-95" onclick="setQuality(95)">High Quality (95%)</button>
+                <button id="quality-60" onclick="setQuality(60)" class="active">Optimized (60%)</button>
+            </div>
+            <div class="status success" id="quality-status">Current: 60% - Balanced quality and speed</div>
+        </div>
+
+        <div class="current-settings">
+            <h4>Current Optimization Settings:</h4>
+            <div class="setting-item">
+                <span>Resolution:</span>
+                <span class="setting-value" id="current-resolution">480×360 (Optimized)</span>
+            </div>
+            <div class="setting-item">
+                <span>Frame Rate:</span>
+                <span class="setting-value" id="current-fps">15 FPS</span>
+            </div>
+            <div class="setting-item">
+                <span>JPEG Quality:</span>
+                <span class="setting-value" id="current-quality">60%</span>
+            </div>
+            <div class="setting-item">
+                <span>WebSocket Status:</span>
+                <span class="setting-value" id="connection-status">Connecting...</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection
+        let websocket = null;
+        let currentSettings = {
+            resolution: 'optimized',
+            fps: 15,
+            quality: 60
+        };
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            const wsUrl = `ws://${location.hostname}:8888`;
+            websocket = new WebSocket(wsUrl);
+            
+            websocket.onopen = function() {
+                console.log('WebSocket connected');
+                websocket.send('admin:123456'); // Auth
+                document.getElementById('connection-status').textContent = 'Connected';
+                document.getElementById('connection-status').style.color = '#28a745';
+            };
+            
+            websocket.onclose = function() {
+                console.log('WebSocket disconnected');
+                document.getElementById('connection-status').textContent = 'Disconnected';
+                document.getElementById('connection-status').style.color = '#dc3545';
+                // Retry connection after 3 seconds
+                setTimeout(initWebSocket, 3000);
+            };
+            
+            websocket.onerror = function() {
+                console.log('WebSocket error');
+                document.getElementById('connection-status').textContent = 'Error';
+                document.getElementById('connection-status').style.color = '#dc3545';
+            };
+        }
+
+        // Send command via WebSocket
+        function sendCommand(command) {
+            if (websocket && websocket.readyState === WebSocket.OPEN) {
+                websocket.send(command);
+                console.log('Sent:', command);
+                return true;
+            } else {
+                console.log('WebSocket not connected');
+                return false;
+            }
+        }
+
+        // Resolution control
+        function setResolution(resolution) {
+            if (sendCommand(`videoResolution ${resolution}`)) {
+                currentSettings.resolution = resolution;
+                
+                // Update button states
+                document.getElementById('res-high').classList.remove('active');
+                document.getElementById('res-optimized').classList.remove('active');
+                document.getElementById(`res-${resolution}`).classList.add('active');
+                
+                // Update status
+                const status = resolution === 'high' 
+                    ? 'High Quality (640×480) - Maximum detail'
+                    : 'Optimized (480×360) - Reduced latency';
+                document.getElementById('res-status').textContent = `Current: ${status}`;
+                document.getElementById('current-resolution').textContent = 
+                    resolution === 'high' ? '640×480 (High)' : '480×360 (Optimized)';
+                
+                // Show warning for high resolution
+                const statusEl = document.getElementById('res-status');
+                if (resolution === 'high') {
+                    statusEl.className = 'status warning';
+                } else {
+                    statusEl.className = 'status success';
+                }
+            }
+        }
+
+        // FPS control
+        function setFPS(fps) {
+            if (sendCommand(`videoFPS ${fps}`)) {
+                currentSettings.fps = fps;
+                
+                // Update button states
+                document.getElementById('fps-30').classList.remove('active');
+                document.getElementById('fps-15').classList.remove('active');
+                document.getElementById(`fps-${fps}`).classList.add('active');
+                
+                // Update status
+                const status = fps === 30 
+                    ? '30 FPS - Smooth but higher CPU usage'
+                    : '15 FPS - Optimized for web streaming';
+                document.getElementById('fps-status').textContent = `Current: ${status}`;
+                document.getElementById('current-fps').textContent = `${fps} FPS`;
+                
+                // Show warning for high FPS
+                const statusEl = document.getElementById('fps-status');
+                if (fps === 30) {
+                    statusEl.className = 'status warning';
+                } else {
+                    statusEl.className = 'status success';
+                }
+            }
+        }
+
+        // Quality control
+        function setQuality(quality) {
+            if (sendCommand(`jpegQuality ${quality}`)) {
+                currentSettings.quality = quality;
+                
+                // Update button states
+                document.getElementById('quality-95').classList.remove('active');
+                document.getElementById('quality-60').classList.remove('active');
+                document.getElementById(`quality-${quality}`).classList.add('active');
+                
+                // Update status
+                const status = quality === 95 
+                    ? '95% - Maximum quality, larger file sizes'
+                    : '60% - Balanced quality and speed';
+                document.getElementById('quality-status').textContent = `Current: ${status}`;
+                document.getElementById('current-quality').textContent = `${quality}%`;
+                
+                // Show warning for high quality
+                const statusEl = document.getElementById('quality-status');
+                if (quality === 95) {
+                    statusEl.className = 'status warning';
+                } else {
+                    statusEl.className = 'status success';
+                }
+            }
+        }
+
+        // Initialize on page load
+        window.onload = function() {
+            initWebSocket();
+            
+            // Set initial button states
+            setResolution('optimized');
+            setFPS(15);
+            setQuality(60);
+        };
+    </script>
+</body>
+</html>

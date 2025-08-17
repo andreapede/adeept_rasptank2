@@ -437,6 +437,19 @@ async def recv_msg(websocket):
             elif 'CVFLSP' in data:
                 err = int(data.split()[1])
                 flask_app.camera.errorSet(err)
+            
+            # Video optimization controls
+            elif 'videoResolution' in data:
+                resolution = data.split()[1]  # "high" or "optimized"
+                flask_app.camera.setVideoResolution(resolution)
+                
+            elif 'videoFPS' in data:
+                fps = int(data.split()[1])  # 30 or 15
+                flask_app.camera.setVideoFPS(fps)
+                
+            elif 'jpegQuality' in data:
+                quality = int(data.split()[1])  # 95 or 60
+                flask_app.camera.setJPEGQuality(quality)
 
         elif(isinstance(data,dict)):
             if data['title'] == "findColorSet":
