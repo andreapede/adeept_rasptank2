@@ -149,6 +149,31 @@
             grid-template-columns: 1fr;
         }
 
+        .grid-2x1 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        /* Arm subsection styles */
+        .arm-subsection {
+            margin-bottom: 15px;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .arm-subsection h4 {
+            margin: 0 0 10px 0;
+            color: #64b5f6;
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .arm-subsection:last-child {
+            margin-bottom: 0;
+        }
+
         .control-btn {
             padding: 12px;
             border: 1px solid rgba(255,255,255,0.3);
@@ -519,7 +544,7 @@
                     <button class="control-btn" id="btn-forward" data-command="forward" data-key="87">⬆️ Forward</button>
                     <div></div>
                     <button class="control-btn" id="btn-left" data-command="left" data-key="65">⬅️ Left</button>
-                    <button class="control-btn danger" id="btn-stop" data-command="stop">⏹️ Stop</button>
+                    <button class="control-btn danger" id="btn-stop" data-command="stop">🛑 STOP ALL</button>
                     <button class="control-btn" id="btn-right" data-command="right" data-key="68">➡️ Right</button>
                     <div></div>
                     <button class="control-btn" id="btn-backward" data-command="backward" data-key="83">⬇️ Backward</button>
@@ -554,11 +579,48 @@
             <!-- Arm Controls -->
             <div class="control-section">
                 <h3>Arm Control</h3>
-                <div class="button-grid grid-2x2">
-                    <button class="control-btn" id="btn-grab" data-command="grab">🤏 Grab</button>
-                    <button class="control-btn" id="btn-loose" data-command="loose">✋ Release</button>
-                    <button class="control-btn" id="btn-arm-up" data-command="armUp">⬆️ Arm Up</button>
-                    <button class="control-btn" id="btn-arm-down" data-command="armDown">⬇️ Arm Down</button>
+                
+                <!-- Main Arm (Shoulder) -->
+                <div class="arm-subsection">
+                    <h4>🦾 Main Arm</h4>
+                    <div class="button-grid grid-2x1">
+                        <button class="control-btn" id="btn-arm-up" data-command="armUp">⬆️ Arm Up</button>
+                        <button class="control-btn" id="btn-arm-down" data-command="armDown">⬇️ Arm Down</button>
+                    </div>
+                </div>
+                
+                <!-- Hand/Forearm -->
+                <div class="arm-subsection">
+                    <h4>✋ Hand/Forearm</h4>
+                    <div class="button-grid grid-2x1">
+                        <button class="control-btn" id="btn-hand-up" data-command="handUp">⬆️ Hand Up</button>
+                        <button class="control-btn" id="btn-hand-down" data-command="handDown">⬇️ Hand Down</button>
+                    </div>
+                </div>
+                
+                <!-- Wrist Rotation -->
+                <div class="arm-subsection">
+                    <h4>🔄 Wrist Rotation</h4>
+                    <div class="button-grid grid-2x1">
+                        <button class="control-btn" id="btn-wrist-left" data-command="lookleft">⬅️ Rotate Left</button>
+                        <button class="control-btn" id="btn-wrist-right" data-command="lookright">➡️ Rotate Right</button>
+                    </div>
+                </div>
+                
+                <!-- Gripper -->
+                <div class="arm-subsection">
+                    <h4>🤏 Gripper</h4>
+                    <div class="button-grid grid-2x1">
+                        <button class="control-btn" id="btn-grab" data-command="grab">🤏 Grab</button>
+                        <button class="control-btn" id="btn-loose" data-command="loose">✋ Release</button>
+                    </div>
+                </div>
+                
+                <!-- Home Position -->
+                <div class="arm-subsection">
+                    <div class="button-grid grid-1col">
+                        <button class="control-btn" id="btn-arm-home" data-command="home">🏠 Home Position</button>
+                    </div>
                 </div>
             </div>
 
@@ -994,21 +1056,41 @@
             // Video optimization buttons
             setupVideoOptimizationControls();
             
-            // Stop button
-            document.getElementById('btn-stop').addEventListener('click', function() {
+            // Emergency stop function - stops all motors and servos
+            function emergencyStopAll() {
+                // Stop all motors
                 sendCommand('DS'); // Direction Stop
                 sendCommand('TS'); // Turn Stop
+                sendCommand('stop'); // General stop command
+                
+                // Stop all servos
+                sendCommand('armStop');    // Stop arm servo
+                sendCommand('handStop');   // Stop hand/forearm servo
+                sendCommand('LRstop');     // Stop wrist rotation servo (Look Left/Right stop)
+                sendCommand('GLstop');     // Stop gripper servo (Grab/Loose stop)
+                sendCommand('UDstop');     // Stop camera tilt servo (Up/Down stop)
+                
                 // Stop all automatic functions
                 sendCommand('automaticOff');
                 sendCommand('trackLineOff');
                 sendCommand('stopCV');
                 sendCommand('policeOff');
                 
+                // Update motor status display to show stopped
+                updateMotorStatus(0, 0);
+                
                 // Reset all active buttons
                 document.querySelectorAll('.control-btn.active').forEach(btn => {
                     btn.classList.remove('active');
                 });
                 activeButtons.clear();
+                
+                console.log('🛑 EMERGENCY STOP: All motors and servos stopped');
+            }
+            
+            // Stop button
+            document.getElementById('btn-stop').addEventListener('click', function() {
+                emergencyStopAll();
             });
         }
 
@@ -1019,13 +1101,21 @@
                 83: 'backward', // S
                 65: 'left',     // A
                 68: 'right',    // D
-                32: 'stop'      // Space
+                32: 'stop',     // Space - Emergency Stop
+                27: 'stop'      // ESC - Emergency Stop
             };
             
             document.addEventListener('keydown', function(e) {
                 if (keyMap[e.keyCode] && !activeButtons.has(keyMap[e.keyCode])) {
                     e.preventDefault();
                     const command = keyMap[e.keyCode];
+                    
+                    // Special handling for emergency stop
+                    if (command === 'stop') {
+                        emergencyStopAll();
+                        return;
+                    }
+                    
                     sendCommand(command);
                     activeButtons.add(command);
                     
@@ -1040,10 +1130,12 @@
                     e.preventDefault();
                     const command = keyMap[e.keyCode];
                     
+                    // Skip keyup handling for stop command since emergency stop is handled in keydown
                     if (command === 'stop') {
-                        sendCommand('DS');
-                        sendCommand('TS');
-                    } else if (['forward', 'backward', 'left', 'right'].includes(command)) {
+                        return;
+                    }
+                    
+                    if (['forward', 'backward', 'left', 'right'].includes(command)) {
                         if (command === 'forward' || command === 'backward') {
                             sendCommand('DS');
                         } else {
