@@ -18,8 +18,10 @@ L'interfaccia **Advanced Controller** è una sostituzione completa dell'interfac
 
 ### 📹 Streaming Video
 - **Video in Tempo Reale**: Stream video dalla camera del robot
-- **Controlli Qualità**: Regolazione qualità, risoluzione e FPS
+- **Controlli Qualità**: Regolazione qualità, risoluzione e FPS con applicazione immediata
 - **Modalità Ottimizzata**: Presets per diverse condizioni di rete
+- **Aggiornamento Automatico**: Il video stream si aggiorna automaticamente quando cambiano le impostazioni
+- **Feedback Visivo**: Indicatori di caricamento durante le modifiche alle impostazioni
 
 ### 🔧 Automazioni
 - **Modalità Automatica**: Navigazione autonoma con evitamento ostacoli
@@ -38,6 +40,30 @@ Se il RaspTank è connesso alla rete WiFi, accedi tramite l'IP assegnato:
 ```
 http://192.168.1.XXX:5000/advanced
 ```
+
+### Controllo Video
+```javascript
+// Cambia risoluzione (High: 640x480, Optimized: 480x360)
+ws.send('videoResolution high');     // o 'optimized'
+ws.send('videoFPS 30');             // FPS: 30 o 15
+ws.send('jpegQuality 95');          // Qualità: 95 o 60
+```
+
+## Ottimizzazioni Video Applicate
+
+### 🎯 Cambiamenti Immediati
+- **Qualità JPEG**: Applicata istantaneamente al prossimo frame
+- **FPS**: Modificato dinamicamente nel loop di acquisizione
+- **Feedback Visivo**: I pulsanti mostrano stato di caricamento
+
+### 🔄 Cambiamenti con Riavvio
+- **Risoluzione**: Richiede riconfigurazione della camera
+- **Dimensioni Canvas**: Aggiornate automaticamente nell'interfaccia
+- **Cache Busting**: URL con timestamp per forzare il refresh
+
+### ⚡ Performance
+- **High Quality**: 640x480, 30 FPS, Qualità 95 (per reti veloci)
+- **Optimized**: 480x360, 15 FPS, Qualità 60 (per reti lente/WiFi debole)
 
 ## Comandi WebSocket
 
@@ -119,6 +145,12 @@ web/
 - Facile aggiunta di nuove funzionalità
 
 ## Risoluzione Problemi
+
+### Video Non Si Aggiorna Dopo Modifica Impostazioni
+1. **Controlla la Connessione WebSocket**: Verifica che l'indicatore di connessione sia verde
+2. **Attendi il Caricamento**: I pulsanti mostrano "Loading..." durante l'applicazione delle modifiche
+3. **Aggiornamento Automatico**: Il video si dovrebbe aggiornare automaticamente dopo 1-2 secondi
+4. **Ricarica Manuale**: Se necessario, ricarica la pagina per resettare il video stream
 
 ### Sensori Non Rispondono
 1. Verificare connessioni GPIO (pin 23 e 24)

@@ -450,14 +450,23 @@ async def recv_msg(websocket):
             elif 'videoResolution' in data:
                 resolution = data.split()[1]  # "high" or "optimized"
                 flask_app.camera.setVideoResolution(resolution)
+                response['title'] = 'video_settings_applied'
+                response['setting'] = 'resolution'
+                response['value'] = resolution
                 
             elif 'videoFPS' in data:
                 fps = int(data.split()[1])  # 30 or 15
                 flask_app.camera.setVideoFPS(fps)
+                response['title'] = 'video_settings_applied'
+                response['setting'] = 'fps'
+                response['value'] = fps
                 
             elif 'jpegQuality' in data:
                 quality = int(data.split()[1])  # 95 or 60
                 flask_app.camera.setJPEGQuality(quality)
+                response['title'] = 'video_settings_applied'
+                response['setting'] = 'quality'
+                response['value'] = quality
                 
             # Ultrasonic sensor commands
             elif 'sensorRead' == data:

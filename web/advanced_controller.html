@@ -572,6 +572,12 @@
                 
                 if (message.title === 'get_info') {
                     updateSystemInfo(message.data);
+                } else if (message.title === 'sensor_data') {
+                    updateSensorReading(message.distance);
+                } else if (message.title === 'video_settings_applied') {
+                    // Video settings confirmed - reload stream
+                    console.log('Video settings applied:', message);
+                    reloadVideoStream();
                 }
             } catch (e) {
                 // Handle text messages or sensor data
@@ -612,6 +618,10 @@
             const ctx = canvas.getContext('2d');
             const videoInfo = document.getElementById('video-info');
             
+            // Set initial canvas size
+            canvas.width = 640;
+            canvas.height = 480;
+            
             function updateVideo() {
                 const img = new Image();
                 img.crossOrigin = 'Anonymous';
@@ -629,8 +639,11 @@
                 };
             }
             
-            // Update video at 15 FPS
-            videoUpdateTimer = setInterval(updateVideo, 1000/15);
+            // Update video immediately
+            updateVideo();
+            
+            // Set up periodic updates to show video changes
+            setInterval(updateVideo, 200); // Update every 200ms for smooth video
         }
 
         // Setup event listeners
@@ -762,45 +775,126 @@
             });
         }
 
+        function reloadVideoStream() {
+            // Force reload of the video stream after settings change
+            const canvas = document.getElementById('video-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear current canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Determine new canvas size based on active resolution button
+            let newWidth = 640, newHeight = 480; // default
+            const activeResBtn = document.querySelector('#video-optimization .video-btn.active');
+            if (activeResBtn) {
+                if (activeResBtn.textContent.includes('High')) {
+                    newWidth = 640;
+                    newHeight = 480;
+                } else if (activeResBtn.textContent.includes('Optimized')) {
+                    newWidth = 480;
+                    newHeight = 360;
+                }
+            }
+            
+            // Update canvas dimensions
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            
+            // Add a small delay to allow server to apply changes
+            setTimeout(() => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                // Add cache busting parameter with resolution info
+                img.src = `http://${location.hostname}:5000/video_feed?res=${newWidth}x${newHeight}&t=${Date.now()}`;
+                
+                img.onload = function() {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    document.getElementById('video-info').textContent = 
+                        `${canvas.width}×${canvas.height} - Updated ${new Date().toLocaleTimeString()}`;
+                    document.getElementById('video-status').classList.add('connected');
+                };
+                
+                img.onerror = function() {
+                    document.getElementById('video-info').textContent = 'Video stream unavailable';
+                    document.getElementById('video-status').classList.remove('connected');
+                    
+                    // Retry with default parameters after error
+                    setTimeout(() => {
+                        img.src = `http://${location.hostname}:5000/video_feed?t=${Date.now()}`;
+                    }, 1000);
+                };
+            }, 800); // Increased delay to allow server processing
+        }
+
         // Video optimization controls
         function setupVideoOptimizationControls() {
             // Resolution buttons
             document.getElementById('btn-res-high').addEventListener('click', function() {
+                this.textContent = 'High (Loading...)';
                 sendCommand('videoResolution high');
                 document.getElementById('btn-res-opt').classList.remove('active');
                 this.classList.add('active');
+                setTimeout(() => {
+                    this.textContent = 'High Quality';
+                    reloadVideoStream();
+                }, 1000);
             });
             
             document.getElementById('btn-res-opt').addEventListener('click', function() {
+                this.textContent = 'Optimized (Loading...)';
                 sendCommand('videoResolution optimized');
                 document.getElementById('btn-res-high').classList.remove('active');
                 this.classList.add('active');
+                setTimeout(() => {
+                    this.textContent = 'Optimized';
+                    reloadVideoStream();
+                }, 1000);
             });
             
             // FPS buttons
             document.getElementById('btn-fps-30').addEventListener('click', function() {
+                this.textContent = '30 FPS (Loading...)';
                 sendCommand('videoFPS 30');
                 document.getElementById('btn-fps-15').classList.remove('active');
                 this.classList.add('active');
+                setTimeout(() => {
+                    this.textContent = '30 FPS';
+                    reloadVideoStream();
+                }, 500);
             });
             
             document.getElementById('btn-fps-15').addEventListener('click', function() {
+                this.textContent = '15 FPS (Loading...)';
                 sendCommand('videoFPS 15');
                 document.getElementById('btn-fps-30').classList.remove('active');
                 this.classList.add('active');
+                setTimeout(() => {
+                    this.textContent = '15 FPS';
+                    reloadVideoStream();
+                }, 500);
             });
             
             // Quality buttons
             document.getElementById('btn-qual-high').addEventListener('click', function() {
+                this.textContent = 'High (Loading...)';
                 sendCommand('jpegQuality 95');
                 document.getElementById('btn-qual-opt').classList.remove('active');
                 this.classList.add('active');
+                setTimeout(() => {
+                    this.textContent = 'High Quality';
+                    reloadVideoStream();
+                }, 500);
             });
             
             document.getElementById('btn-qual-opt').addEventListener('click', function() {
+                this.textContent = 'Optimized (Loading...)';
                 sendCommand('jpegQuality 60');
                 document.getElementById('btn-qual-high').classList.remove('active');
                 this.classList.add('active');
+                setTimeout(() => {
+                    this.textContent = 'Optimized';
+                    reloadVideoStream();
+                }, 500);
             });
         }
 

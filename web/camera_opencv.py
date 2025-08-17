@@ -42,6 +42,7 @@ forward_speed = 50 # Avoid too fast, the video screen does not respond in time. 
 video_resolution = "high"  # "high" (640x480) or "optimized" (480x360)
 video_fps = 30  # Target FPS: 30 (high) or 15 (optimized)
 jpeg_quality = 95  # JPEG quality: 95 (high) or 60 (optimized)
+camera_restart_needed = False  # Flag to indicate camera needs restart
 
 hflip = 0 # Video flip horizontally: 0 or 1 
 vflip = 0 # Video vertical flip: 0/1 
@@ -474,9 +475,11 @@ class Camera(BaseCamera):
         return Threshold
 
     def setVideoResolution(self, resolution):
-        global video_resolution
-        video_resolution = resolution
-        print(f"Video resolution set to: {resolution}")
+        global video_resolution, camera_restart_needed
+        if video_resolution != resolution:
+            video_resolution = resolution
+            camera_restart_needed = True
+            print(f"Video resolution set to: {resolution} - Camera will restart")
     
     def setVideoFPS(self, fps):
         global video_fps
