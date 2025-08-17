@@ -413,6 +413,67 @@
             font-size: 12px;
         }
 
+        /* Battery display styles */
+        .battery-item {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+        }
+
+        .battery-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            margin-top: 4px;
+        }
+
+        .battery-bar {
+            flex: 1;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .battery-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: all 0.5s ease;
+            background: #4caf50; /* Default green */
+        }
+
+        .battery-fill.battery-medium {
+            background: #ff9800; /* Orange for medium */
+        }
+
+        .battery-fill.battery-low {
+            background: #f44336; /* Red for low */
+        }
+
+        .battery-fill.battery-critical {
+            background: #d32f2f; /* Dark red for critical */
+            animation: batteryBlink 1s infinite alternate;
+        }
+
+        @keyframes batteryBlink {
+            0% { opacity: 1; }
+            100% { opacity: 0.3; }
+        }
+
+        .battery-percentage {
+            color: #64b5f6;
+            font-weight: 600;
+            font-size: 11px;
+            min-width: 35px;
+        }
+
+        #battery-voltage {
+            font-size: 11px;
+            min-width: 45px;
+        }
+
         /* Responsive */
         @media (max-width: 1024px) {
             .main-container {
@@ -648,6 +709,16 @@
                         <span class="info-label">Distance</span>
                         <span class="info-value" id="current-distance">--- cm</span>
                     </div>
+                    <div class="info-item battery-item">
+                        <span class="info-label">🔋 Battery</span>
+                        <div class="battery-info">
+                            <span class="info-value" id="battery-voltage">--.-- V</span>
+                            <div class="battery-bar">
+                                <div class="battery-fill" id="battery-fill"></div>
+                            </div>
+                            <span class="battery-percentage" id="battery-percentage">---%</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -749,6 +820,11 @@
         let sensorUpdateRate = 10;
         let activeButtons = new Set();
 
+        // Battery monitoring
+        let batteryVoltage = 0;
+        let batteryPercentage = 0;
+        let batteryTimer = null;
+
         // Servo and motor status tracking
         let servoStatus = {
             arm: 90,        // Arm servo angle (0-180) - armUp/armDown
@@ -810,6 +886,12 @@
                 
                 if (message.title === 'get_info') {
                     updateSystemInfo(message.data);
+                } else if (message.title === 'get_battery') {
+                    if (message.voltage !== undefined) {
+                        const voltage = parseFloat(message.voltage);
+                        const percentage = calculateBatteryPercentage(voltage);
+                        updateBatteryDisplay(voltage, percentage);
+                    }
                 } else if (message.title === 'sensor_data') {
                     updateSensorReading(message.distance);
                 } else if (message.title === 'video_settings_applied') {
@@ -1331,9 +1413,54 @@
             updateSensorChart();
         }
 
+        // Battery monitoring functions
+        function calculateBatteryPercentage(voltage) {
+            // Voltage curve for 2x 18650 Li-ion batteries in series (7.4V nominal)
+            // Full: 8.4V (4.2V per cell)
+            // Empty: 6.0V (3.0V per cell - safe minimum)
+            if (voltage >= 8.4) return 100;
+            if (voltage <= 6.0) return 0;
+            
+            // Simple linear interpolation for now
+            // Could be improved with actual Li-ion discharge curve
+            return Math.round(((voltage - 6.0) / (8.4 - 6.0)) * 100);
+        }
+
+        function updateBatteryDisplay(voltage, percentage) {
+            // Update voltage display
+            document.getElementById('battery-voltage').textContent = `${voltage.toFixed(2)}V`;
+            
+            // Update percentage display
+            document.getElementById('battery-percentage').textContent = `${percentage}%`;
+            
+            // Update battery bar
+            const batteryBar = document.querySelector('.battery-bar');
+            batteryBar.style.width = `${percentage}%`;
+            
+            // Update battery color based on percentage
+            const batteryContainer = document.querySelector('.battery-container');
+            batteryContainer.className = 'battery-container'; // Reset classes
+            
+            if (percentage <= 10) {
+                batteryContainer.classList.add('critical');
+            } else if (percentage <= 25) {
+                batteryContainer.classList.add('low');
+            } else if (percentage <= 50) {
+                batteryContainer.classList.add('medium');
+            } else {
+                batteryContainer.classList.add('high');
+            }
+        }
+
+        function requestBatteryInfo() {
+            sendCommand('get_battery');
+        }
+
         // System info functions
         function requestSystemInfo() {
             sendCommand('get_info');
+            // Also request battery info
+            requestBatteryInfo();
         }
 
         function updateSystemInfo(data) {

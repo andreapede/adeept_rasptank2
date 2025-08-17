@@ -24,6 +24,7 @@ import websockets
 
 import json
 import app
+import battery_monitor
 
 OLED_connection = 0
 
@@ -418,6 +419,21 @@ async def recv_msg(websocket):
             if 'get_info' == data:
                 response['title'] = 'get_info'
                 response['data'] = [info.get_cpu_tempfunc(), info.get_cpu_use(), info.get_ram_info()]
+
+            elif 'get_battery' == data:
+                try:
+                    battery_mon = battery_monitor.get_battery_monitor()
+                    battery_status = battery_mon.get_battery_status()
+                    response['title'] = 'get_battery'
+                    response['voltage'] = battery_status['voltage']
+                    response['percentage'] = battery_status['percentage']
+                    response['status'] = battery_status['status']
+                except Exception as e:
+                    print(f"Error reading battery: {e}")
+                    response['title'] = 'get_battery'
+                    response['voltage'] = 0.0
+                    response['percentage'] = 0
+                    response['status'] = 'Error'
 
             if 'wsB' in data:
                 try:
